@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import logo from './logo.svg';
 import './App.css';
 
@@ -17,13 +17,20 @@ const scopeURIFragment = REQUESTED_SCOPES.join(',')
 
 
 export default () => {
+  const [token, setToken] = useState(null);
   const { pathname } = window.location;
 
   let authorizationCode = "";
   if (pathname == '/redirectEndpoint') {
     const URLParams = new URLSearchParams(window.location.search);
     authorizationCode = URLParams.get("code");
+  } 
+
+  const fetchToken = async () => {
+    const response = await getToken(authorizationCode);
+    setToken(response);
   }
+
   return (
     <div className="App">
       <header className="App-header">
@@ -41,9 +48,12 @@ export default () => {
         {
           pathname === "/redirectEndpoint" &&
           <section>
-            <a href="#" onClick={() => getToken(authorizationCode)}>
+            <a href="#" onClick={fetchToken}>
               Get Token
             </a>
+            <p>
+              { token }
+            </p>
           </section>
         }
       </header>
@@ -88,10 +98,16 @@ function processRequest(request) {
 }
 
 const getToken = async authCode => {
-  fetch('http://localhost:4821/code', {
+  const response = await fetch('http://localhost:4821/code', {
     method: "POST",
     body: JSON.stringify({
       authorizationCode: authCode
     })
   });
+  try {
+    const response = await response.json();
+    return response;
+  } catch (e) {
+    return await response.text();
+  }
 }
