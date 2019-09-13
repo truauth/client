@@ -12,7 +12,7 @@ const state = 'who cares'
 
 const shouldPrompt = true
 
-const REQUESTED_SCOPES = [OPEN_ID, "profile"]
+const REQUESTED_SCOPES = [OPEN_ID, "profile", "sso"]
 const scopeURIFragment = REQUESTED_SCOPES.join(',')
 
 
@@ -21,8 +21,9 @@ export default () => {
   const { pathname } = window.location;
 
   let authorizationCode = "";
+  const URLParams = new URLSearchParams(window.location.search);
   if (pathname == '/redirectEndpoint') {
-    const URLParams = new URLSearchParams(window.location.search);
+
     authorizationCode = URLParams.get("code");
   } 
 
@@ -46,34 +47,66 @@ export default () => {
           )
         }
         {
-          pathname === "/redirectEndpoint" &&
-          <section>
-            <a href="#" onClick={fetchToken}>
-              Get Token
-            </a>
-            <p>
-              { token }
-            </p>
-          </section>
-        }
+          pathname === "/redirectEndpoint" && (
+            <Rte URLParams={URLParams} fetchToken={fetchToken} token={token}/>
+          )}
       </header>
     </div>
   );
 }
 
-const Auth = () => {
-  return shouldPrompt ? (
-    <>
-      <button onClick={handlePromt}>  Do it! </button>
-    </>
-  ) :
-    (
-      <>
-        <a href={`http://localhost:4820/auth?response_type=${RESPONSE_TYPE}&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=${scopeURIFragment}&state=${state}`}>
-          Authenticate with Truth
-        </a>
-      </>
+const Rte = ({ URLParams, fetchToken, token }) => {
+  if(URLParams.get("code") !== 'null') {
+    return (
+      <section>
+      <a href="#" onClick={fetchToken}>
+        Get Token
+      </a>
+      <p>
+        { token }
+      </p>
+    </section>
     )
+  }
+
+  return <>
+  <div>
+  token: { URLParams.get("token") }
+  </div>
+  <div>
+  refresh token:  { URLParams.get("refresh_token") }
+  </div>
+  </>
+
+}
+
+const Auth = () => (
+  <>
+     <button onClick={handlePromtSSO}>  Test SSO </button>
+    {
+shouldPrompt ? (
+  <>
+    <button onClick={handlePromt}>  Do it! </button>
+  </>
+) :
+  (
+    <>
+      <a href={`http://localhost:4820/auth?response_type=${RESPONSE_TYPE}&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=${scopeURIFragment}&state=${state}`}>
+        Authenticate with Truth
+      </a>
+    </>
+  )
+    }
+  </>
+)
+const handlePromtSSO = () => {
+  const win = window.open(
+    `http://localhost:4820/auth?response_type=token&client_id=${CLIENT_ID}&redirect_uri=http://localhost:3000/cb&scope=${scopeURIFragment}&state=${state}`,
+    "_blank",
+    "toolbar=yes,scrollbars=yes,resizable=yes,top=500,left=500,width=400,height=400"
+  )
+
+  win.focus()
 }
 
 const handlePromt = () => {
@@ -92,8 +125,9 @@ window.addEventListener('message', function(e) {
 } , false);
 
 function processRequest(request) {
+  console.log(request)
   if(request.valid == true) {
-    window.location = `${REDIRECT_URI}?code=${request.code}`
+    window.location = `${REDIRECT_URI}?code=${request.code}&token=${request.token}&refresh_token=${request.refreshToken}`
   }
 }
 
